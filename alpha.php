@@ -22,7 +22,7 @@ $now = date('Y-m-d H:i:s');
 // Пример вставки заказа
 $sql = "INSERT INTO orders (product_id, quantity, buyer_info, purchase_time)
         VALUES ($1, $2, $3, $4)";
-$res = pg_query_params($db, $sql, [$category_id, $product_id, $quantity, $price, $now]);
+$res = pg_query_params($db, $sql, [$product_id, $quantity, $buyer_info, $now]);
 if (!$res) {
     @unlink($lock_file);
     http_response_code(500);
