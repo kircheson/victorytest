@@ -5,7 +5,8 @@ $db = get_pg_connection();
 // 1. Получить последние 100 заказов по времени:
 $sql = "SELECT o.*, c.name as category_name
         FROM orders o
-        JOIN categories c ON o.category_id = c.id
+        JOIN products p ON o.product_id = p.id
+        JOIN categories c ON p.category_id = c.id
         ORDER BY o.purchase_time DESC
         LIMIT 100";
 $res = pg_query($db, $sql);
