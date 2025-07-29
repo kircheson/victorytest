@@ -8,7 +8,7 @@ function get_pg_connection() {
     $sslmode = 'require';
     $sslrootcert = __DIR__ . '/ca.pem';
 
-    $connStr = "host=$host port=$port dbname=$dbname user=$user password=$password sslmode=$sslmode";
+    $connStr = "host=$host port=$port dbname=$dbname user=$user password=$password sslmode=$sslmode sslrootcert=$sslrootcert";
     if (file_exists($sslrootcert)) {
         $connStr .= " sslrootcert=$sslrootcert";
     }
