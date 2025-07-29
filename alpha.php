@@ -16,6 +16,7 @@ $db = get_pg_connection();
 $category_id = rand(1, 3); // Например, 3 категории
 $product_id = rand(1, 10);
 $quantity = rand(1, 5);
+$buyer_info = 'Test buyer';  // или рандомная строка
 $price = rand(100, 1000);
 $now = date('Y-m-d H:i:s');
 
