@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8" />
+<title>Клиент для проекта</title>
+<style>
+  body { font-family: Arial, sans-serif; margin: 20px; }
+  label, input, button { font-size: 16px; }
+  #stats { margin-top: 20px; }
+  pre { background: #f0f0f0; padding: 10px; border-radius: 5px; }
+</style>
+</head>
+<body>
+
+<h1>Клиент для запуска Beta и просмотра Gamma</h1>
+
+<label for="repeatCount">Количество запусков Beta (N): </label>
+<input type="number" id="repeatCount" value="100" min="1" max="1000" />
+<button id="startBtn">Запустить Beta</button>
+
+<div id="status"></div>
+
+<div id="stats">
+  <h2>Статистика (Gamma):</h2>
+  <pre id="gammaOutput">Загрузка...</pre>
+</div>
+
+<script>
+const startBtn = document.getElementById('startBtn');
+const repeatCountInput = document.getElementById('repeatCount');
+const statusDiv = document.getElementById('status');
+const gammaOutput = document.getElementById('gammaOutput');
+
+let gammaInterval = null;
+
+async function fetchGamma() {
+  try {
+    const response = await fetch('/gamma.php');
+    if (!response.ok) throw new Error('Ошибка запроса Gamma');
+    const data = await response.json();
+
+    let output = `Всего заказов: ${data.orders_count}\n`;
+    output += 'Количество товаров по категориям:\n';
+
+    for (const [cat, count] of Object.entries(data.categories)) {
+      output += ` - ${cat}: ${count}\n`;
+    }
+
+    output += `Время между первым и последним заказом: ${data.time_between}`;
+
+    gammaOutput.textContent = output;
+  } catch (err) {
+    gammaOutput.textContent = 'Ошибка получения статистики';
+  }
+}
+
+startBtn.onclick = async () => {
+  const n = parseInt(repeatCountInput.value, 10);
+  if (isNaN(n) || n < 1 || n > 1000) {
+    alert('Введите корректное число от 1 до 1000');
+    return;
+  }
+
+  statusDiv.textContent = 'Запускаем Beta... Пожалуйста, ждите';
+
+  try {
+    const response = await fetch(`/beta.php?n=${n}`);
+    if (!response.ok) throw new Error('Ошибка запроса Beta');
+
+    const results = await response.json();
+
+    let successCount = results.filter(r => r.includes('Заказ успешно добавлен')).length;
+    statusDiv.textContent = `Beta завершён. Успешных заказов: ${successCount} из ${n}`;
+  } catch (err) {
+    statusDiv.textContent = `Ошибка запуска Beta: ${err.message}`;
+  }
+};
+
+// Запускаем первый раз и потом каждую секунду обновляем Gamma
+fetchGamma();
+gammaInterval = setInterval(fetchGamma, 1000);
+</script>
+
+</body>
+</html>
+
