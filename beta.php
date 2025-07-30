@@ -2,7 +2,8 @@
 $n = isset($_GET['n']) ? intval($_GET['n']) : 10;
 $n = max(1, min($n, 100)); // ограничение для безопасности
 
-$url = (isset($_SERVER['HTTPS']) ? "https" : "http") . "://".$_SERVER['HTTP_HOST'].dirname($_SERVER['SCRIPT_NAME'])."/alpha.php";
+$baseDir = rtrim(dirname($_SERVER['SCRIPT_NAME']), '/\\');
+$url = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? "https" : "http") . "://" . $_SERVER['HTTP_HOST'] . $baseDir . "/alpha.php";
 
 $multiHandle = curl_multi_init();
 $curlHandles = [];
