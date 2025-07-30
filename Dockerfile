@@ -1,18 +1,23 @@
 FROM php:8.2-apache
 
-# Устанавливаем необходимые зависимости для PostgreSQL
+# Устанавливаем необходимые зависимости для PostgreSQL и Redis
 RUN apt-get update && apt-get install -y \
     libpq-dev \
     unzip \
-    && rm -rf /var/lib/apt/lists/* # Очищаем кэш apt для уменьшения размера образа
+    libzip-dev \
+    libssl-dev \
+    && rm -rf /var/lib/apt/lists/*
 
+# PECL устанавливаем расширение Redis и включаем
+RUN pecl install redis \
+    && docker-php-ext-enable redis
+
+# Устанавливаем расширения PostgreSQL
 RUN docker-php-ext-install pdo pdo_pgsql pgsql
 
-# Устанавливаем predis для Redis (через Composer), если понадобится
+# Устанавливаем Composer
 RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
 
+# Копируем приложение
 COPY . /var/www/html/
 WORKDIR /var/www/html/
-
-# сертификат ca.pem
-# (он уже в репозитории)
