@@ -3,7 +3,8 @@ $n = isset($_GET['n']) ? intval($_GET['n']) : 10;
 $n = max(1, min($n, 100)); // ограничение для безопасности
 
 $baseDir = rtrim(dirname($_SERVER['SCRIPT_NAME']), '/\\');
-$url = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? "https" : "http") . "://" . $_SERVER['HTTP_HOST'] . $baseDir . "/alpha.php";
+$url = "https://" . $_SERVER['HTTP_HOST'] . $baseDir . "/alpha.php";
+error_log("Alpha URL: $url");
 
 $multiHandle = curl_multi_init();
 $curlHandles = [];
@@ -12,6 +13,7 @@ for ($i = 0; $i < $n; $i++) {
     $ch = curl_init();
     curl_setopt($ch, CURLOPT_URL, $url);
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
     curl_multi_add_handle($multiHandle, $ch);
     $curlHandles[] = $ch;
 }
