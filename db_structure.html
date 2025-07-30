@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Структура базы данных</title>
+<style>
+  body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: #fefefe;
+    margin: 20px auto;
+    max-width: 900px;
+    color: #333;
+  }
+  h1 {
+    text-align: center;
+    color: #1a73e8;
+  }
+  .diagram {
+    display: flex;
+    flex-wrap: nowrap;
+    justify-content: center;
+    gap: 20px;
+    margin-top: 30px;
+    position: relative;
+  }
+  .table-box {
+    background: #f0f4ff;
+    border: 2px solid #1a73e8;
+    border-radius: 8px;
+    width: 280px;
+    padding: 15px 20px;
+    box-shadow: 0 2px 6px rgba(26, 115, 232, 0.15);
+    display: flex;
+    flex-direction: column;
+  }
+  .table-name {
+    font-weight: 700;
+    font-size: 1.3em;
+    margin-bottom: 12px;
+    color: #0b47a1;
+    border-bottom: 2px solid #1a73e8;
+    padding-bottom: 5px;
+  }
+  .field {
+    font-size: 0.9em;
+    padding: 5px 0;
+    border-bottom: 1px dotted #ccc;
+  }
+  .field:last-child {
+    border-bottom: none;
+  }
+  .field .field-name {
+    font-weight: 600;
+  }
+  .field .field-type {
+    color: #555;
+    font-style: italic;
+    margin-left: 5px;
+  }
+  .field.primary-key {
+    color: #d84315;
+  }
+  .field.foreign-key {
+    color: #0b8043;
+  }
+
+  /* Простые линии вместо стрелок - расположим под таблицами */
+  .relations {
+    margin-top: 40px;
+    display: flex;
+    justify-content: space-between;
+    gap: 20px;
+  }
+  .relation {
+    flex: 1;
+    padding: 10px;
+    background: #e8f0fe;
+    border-radius: 6px;
+    border: 1px solid #90caf9;
+    font-size: 0.9em;
+    color: #1967d2;
+    box-shadow: inset 0 0 5px rgba(0,0,0,0.05);
+  }
+
+  /* Легенда */
+  .legend {
+    margin-top: 40px;
+    background: #e8f0fe;
+    padding: 15px 20px;
+    border-radius: 8px;
+    border: 1px solid #90caf9;
+  }
+  .legend h2 {
+    color: #1967d2;
+  }
+  .legend ul {
+    list-style: disc inside;
+  }
+
+  /* Адаптив */
+  @media (max-width: 650px) {
+    .diagram {
+      justify-content: center;
+    }
+  }
+</style>
+</head>
+<body>
+
+<h1>Структура базы данных</h1>
+
+<div class="diagram" aria-label="Таблицы базы данных">
+  <!-- Категории -->
+  <div class="table-box" id="categories">
+    <div class="table-name">categories</div>
+    <div class="field primary-key"><span class="field-name">id</span> <span class="field-type">serial PK</span></div>
+    <div class="field"><span class="field-name">name</span> <span class="field-type">varchar(100), UNIQUE, NOT NULL</span></div>
+    <div class="field"><span class="field-name">description</span> <span class="field-type">text</span></div>
+  </div>
+
+  <!-- Продукты -->
+  <div class="table-box" id="products">
+    <div class="table-name">products</div>
+    <div class="field primary-key"><span class="field-name">id</span> <span class="field-type">serial PK</span></div>
+    <div class="field foreign-key"><span class="field-name">category_id</span> <span class="field-type">integer FK → categories(id)</span></div>
+    <div class="field"><span class="field-name">name</span> <span class="field-type">varchar(150), NOT NULL</span></div>
+    <div class="field"><span class="field-name">price</span> <span class="field-type">numeric(10,2) ≥ 0</span></div>
+    <div class="field"><span class="field-name">sku</span> <span class="field-type">varchar(50), UNIQUE, NOT NULL</span></div>
+    <div class="field"><span class="field-name">description</span> <span class="field-type">text</span></div>
+  </div>
+
+  <!-- Заказы -->
+  <div class="table-box" id="orders">
+    <div class="table-name">orders</div>
+    <div class="field primary-key"><span class="field-name">id</span> <span class="field-type">serial PK</span></div>
+    <div class="field foreign-key"><span class="field-name">product_id</span> <span class="field-type">integer FK → products(id)</span></div>
+    <div class="field"><span class="field-name">quantity</span> <span class="field-type">integer &gt; 0</span></div>
+    <div class="field"><span class="field-name">buyer_info</span> <span class="field-type">varchar(255)</span></div>
+    <div class="field"><span class="field-name">purchase_time</span> <span class="field-type">timestamp with time zone, default CURRENT_TIMESTAMP</span></div>
+  </div>
+
+  <!-- Статистика -->
+  <div class="table-box" id="statistics">
+    <div class="table-name">statistics</div>
+    <div class="field primary-key"><span class="field-name">id</span> <span class="field-type">serial PK</span></div>
+    <div class="field foreign-key"><span class="field-name">product_id</span> <span class="field-type">integer FK → products(id), on delete set null</span></div>
+    <div class="field foreign-key"><span class="field-name">category_id</span> <span class="field-type">integer FK → categories(id), on delete set null</span></div>
+    <div class="field"><span class="field-name">orders_count</span> <span class="field-type">integer ≥ 0, NOT NULL, DEFAULT 0</span></div>
+    <div class="field"><span class="field-name">period_start</span> <span class="field-type">timestamp with time zone, NOT NULL</span></div>
+    <div class="field"><span class="field-name">period_end</span> <span class="field-type">timestamp with time zone, NOT NULL</span></div>
+  </div>
+</div>
+
+<div class="relations" aria-label="Связи таблиц">
+  <div class="relation"><b>products.category_id → categories.id</b></div>
+  <div class="relation"><b>orders.product_id → products.id</b></div>
+  <div class="relation"><b>statistics.product_id → products.id</b>, on delete set null</div>
+  <div class="relation"><b>statistics.category_id → categories.id</b>, on delete set null</div>
+</div>
+
+<div class="legend" aria-label="Обозначения">
+  <h2>Пояснения</h2>
+  <ul>
+    <li><b>PK</b> — первичный ключ (Primary Key)</li>
+    <li><b>FK</b> — внешний ключ (Foreign Key), указывающий на связь с другой таблицей</li>
+    <li>Уникальные поля отмечены, ограничения CHECK видны рядом с типом поля</li>
+  </ul>
+</div>
+
+</body>
+</html>
