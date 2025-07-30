@@ -20,17 +20,24 @@ $orders = [];
 $categories = [];
 $first_time = null;
 $last_time = null;
+
 while ($row = pg_fetch_assoc($res)) {
     $orders[] = $row;
     $cat = $row['category_name'];
     $categories[$cat] = ($categories[$cat] ?? 0) + $row['quantity'];
-    if (!$last_time) $last_time = $row['purchase_time'];
-    $first_time = $row['purchase_time'];
+
+    if ($first_time === null || $row['purchase_time'] < $first_time) {
+        $first_time = $row['purchase_time'];
+    }
+    if ($last_time === null || $row['purchase_time'] > $last_time) {
+        $last_time = $row['purchase_time'];
+    }
 }
+
 $interval = '';
 if ($first_time && $last_time && $first_time != $last_time) {
-    $dt1 = strtotime($last_time);
-    $dt2 = strtotime($first_time);
+    $dt1 = strtotime($first_time);
+    $dt2 = strtotime($last_time);
     $interval = ($dt2 - $dt1) . " сек.";
 }
 
