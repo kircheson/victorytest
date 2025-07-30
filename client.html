@@ -231,7 +231,8 @@
 
       const results = await response.json();
 
-      let successCount = results.filter(r => r.includes('Заказ успешно добавлен')).length;
+    let successCount = results.filter(r => r.http_code === 200 && r.body.includes('Заказ успешно добавлен')).length;
+    console.log(results); // для отладки
 
       statusDiv.textContent = `Beta завершён. Успешных заказов: ${successCount} из ${n}`;
     } catch (err) {
