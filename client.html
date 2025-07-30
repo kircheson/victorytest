@@ -100,20 +100,32 @@
     display: none;
     font-size: 0.9em;
     line-height: 1.4;
-    max-height: 420px;
+    max-height: 460px;
     overflow-y: auto;
   }
   #documentation h3 {
     margin-top: 0;
     color: #005fa3;
   }
+  #documentation ul {
+    padding-left: 20px;
+  }
+  #documentation code {
+    background-color: #eee;
+    padding: 2px 4px;
+    border-radius: 4px;
+    font-size: 0.9em;
+  }
   /* Вспомогательные кнопки */
   #extraButtons {
     margin-top: 20px;
+    display: flex;
+    flex-wrap: wrap;
   }
   #extraButtons button {
     margin-left: 0;
     margin-right: 15px;
+    margin-bottom: 10px;
   }
   /* Адаптив */
   @media (max-width: 480px) {
@@ -149,7 +161,7 @@
   <div id="status"></div>
 </div>
 
-<div id="extraButtons" style="display:flex; flex-wrap: wrap; margin-top: 10px;">
+<div id="extraButtons">
   <button id="alphaCheckBtn" title="Отправить одиночный заказ (Alpha)">Проверить Alpha</button>
   <button id="gammaRefreshBtn" title="Обновить статистику Gamma вручную">Обновить Gamma</button>
 </div>
@@ -162,27 +174,61 @@
 <div id="docToggle">▶ Показать / скрыть документацию проекта</div>
 <div id="documentation" role="region" aria-live="polite" aria-label="Документация проекта">
   <h3>Описание проекта</h3>
-  <p>Проект реализует API заказов с PostgreSQL и Redis-блокировкой для защиты от повторного запуска. В проекте есть четыре основных компонента:</p>
+  <p>Проект реализует API заказов с использованием PostgreSQL (на Aiven) для хранения данных и Redis (на Upstash) для блокировок от повторного запуска. Основные модули и их функции:</p>
   <ul>
-    <li><b>Alpha.php</b> — Добавляет один заказ в базу, с защитой блокировкой через Redis (используется Upstash и Predis).</li>
-    <li><b>Beta.php</b> — Запускает Alpha N раз параллельно, возвращая массив статусов.</li>
-    <li><b>Gamma.php</b> — Отдаёт статистику по последним 100 заказам: количество товаров по категориям, общее число заказов, интервал времени между первым и последним.</li>
-    <li><b>Клиент</b> (текущая страница) — Интерактивный интерфейс для запуска Beta и просмотра статистики Gamma, а также блок документации.</li>
+    <li><b>Alpha.php</b><br>
+        Добавляет один заказ в базу данных. При этом применяется блокировка через Redis, чтобы предотвратить одновременный запуск нескольких экземпляров. Используется библиотека Predis для взаимодействия с Upstash Redis.</li>
+    <li><b>Beta.php</b><br>
+        Запускает Alpha скрипт <code>n</code> раз параллельно, с обработкой блокировок и повторными попытками при необходимости. Возвращает массив результатов с HTTP-кодами, ответами и количеством попыток для каждого запуска.</li>
+    <li><b>Gamma.php</b><br>
+        Возвращает статистику по последним 100 заказам: общее количество заказов, количество товаров по категориям и интервал между первым и последним заказом (в секундах).</li>
+    <li><b>Клиент</b> (текущая страница)<br>
+        Веб-интерфейс для запуска Beta, вывода статистики Gamma, проверки одиночного Alpha и просмотра документации.</li>
   </ul>
+
   <h3>Переменные окружения</h3>
   <ul>
-    <li><code>DB_HOST</code>, <code>DB_PORT</code>, <code>DB_NAME</code>, <code>DB_USER</code>, <code>DB_PASS</code>, <code>SSLMODE</code> и <code>SSLROOTCERT</code> — для подключения к PostgreSQL.</li>
-    <li><code>REDIS_URL</code> — URL подключения к Upstash Redis с поддержкой TLS (например, <code>rediss://default:token@host:port</code>).</li>
+    <li><code>DB_HOST</code>, <code>DB_PORT</code>, <code>DB_NAME</code>, <code>DB_USER</code>, <code>DB_PASS</code>, <code>SSLMODE</code>, <code>SSLROOTCERT</code> – параметры подключения к базе PostgreSQL.</li>
+    <li><code>REDIS_URL</code> – URL подключения к Upstash Redis с поддержкой TLS, например <code>rediss://default:token@host:port</code>.</li>
   </ul>
+
   <h3>Как пользоваться клиентом</h3>
   <ol>
-    <li>Введите количество запусков Beta (N), например, 100.</li>
-    <li>Нажмите <b>Запустить Beta</b>, чтобы параллельно добавить N заказов.</li>
-    <li>Статистика автоматически обновляется каждую секунду.</li>
-    <li>Кнопка <b>Проверить Alpha</b> позволяет добавить один заказ вручную отдельно.</li>
-    <li>Кнопка <b>Обновить Gamma</b> обновляет статистику немедленно.</li>
+    <li>В поле <i>Количество запусков Beta (N)</i> введите число (от 1 до 1000), сколько раз нужно запустить скрипт Alpha.</li>
+    <li>Нажмите кнопку <b>Запустить Beta</b>, чтобы запустить N параллельных попыток добавления заказов.</li>
+    <li>Статистика заказов автоматически обновляется каждую секунду в блоке "Статистика (Gamma)".</li>
+    <li>Кнопка <b>Проверить Alpha</b> позволяет отправить одиночный заказ вручную для теста.</li>
+    <li>Кнопка <b>Обновить Gamma</b> позволяет немедленно обновить статистику без ожидания автообновления.</li>
   </ol>
-  <p>Проект реализован на чистом PHP (без фреймворков), использует PostgreSQL (aiven) и Redis (upstash) для блокировок.</p>
+
+  <h3>Особенности реализации</h3>
+  <ul>
+    <li>Redis-блокировка защищает от параллельного выполнения Alpha. При попытке запусков одновременно Alpha выдает ошибку с HTTP-кодом 429 и сообщением "Alpha уже выполняется".</li>
+    <li>Beta.php в случае получения блокировок повторяет запросы несколько раз с небольшими задержками, чтобы гарантировать заданное количество успешных запусков Alpha.</li>
+    <li>Время жизни блокировки Redis (TTL) в Alpha установлено примерно в 3-5 секунд, чтобы сбалансировать защиту и пропускную способность.</li>
+    <li>Все скрипты написаны на чистом PHP без использования фреймворков.</li>
+    <li>PostgreSQL используется для хранения данных по заказам, категориям и статистике.</li>
+  </ul>
+  
+  <h3>Примеры запросов и ответов</h3>
+  <ul>
+    <li><b>Alpha.php</b> — GET запрос, возвращает:<br>
+      <code>200 OK</code> с текстом <i>Заказ успешно добавлен!</i><br>
+      или <code>429</code> с текстом <i>Alpha уже выполняется, попробуйте позже.</i></li>
+    <li><b>Beta.php?n=10</b> — GET запрос, возвращает JSON-массив объектов с полями <code>http_code</code>, <code>body</code>, <code>attempts</code> для каждого из 10 запусков Alpha.</li>
+    <li><b>Gamma.php</b> — GET запрос, возвращает JSON с:</li>
+      <pre>{
+  "orders_count": 100,
+  "categories": {
+    "Clothing": 50,
+    "Electronics": 20,
+    ...
+  },
+  "time_between": 3600
+}</pre>
+  </ul>
+  
+  <p>Документация будет обновляться по мере внесения новых изменений и улучшений проекта.</p>
 </div>
 
 <script>
