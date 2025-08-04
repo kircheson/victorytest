@@ -258,6 +258,7 @@
       const response = await fetch('/gamma.php');
       if (!response.ok) throw new Error('Ошибка запроса Gamma');
       const data = await response.json();
+      console.log("Gamma data:", data); // DEBUG: смотрим приходит ли новый JSON (чтобы видеть наглядное изменение покзаний в окошке с ответом)
 
       let output = `Всего заказов: ${data.orders_count}\n`;
       output += 'Количество товаров по категориям:\n';
