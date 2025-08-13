@@ -260,8 +260,7 @@
       const data = await response.json();
       console.log("Gamma data:", data); // DEBUG: смотрим приходит ли новый JSON (чтобы видеть наглядное изменение покзаний в окошке с ответом)
 
-      let output = `Всего заказов: ${data.orders_count}\n`;
-      output += 'Количество товаров по категориям:\n';
+    let output = `Всего заказов: ${data.orders_count}\nКоличество товаров по категориям:\n`;
 
       for (const [cat, count] of Object.entries(data.categories)) {
         output += ` - ${cat}: ${count}\n`;
@@ -272,100 +271,131 @@
       gammaOutput.textContent = output;
     } catch (err) {
       gammaOutput.textContent = 'Ошибка получения статистики';
+      console.error('Ошибка fetchGamma:', err);
+  }
+}
+
+// Асинхронный запуск Beta с N попытками запросов к Beta.php (каждый запускает Alpha)
+async function runBetaClientSide(n) {
+  let completed = 0;
+  let success = 0;
+  const maxRetries = 15; // максимум повторов при 429
+  const delayMs = 300;   // задержка между повторами
+
+  statusDiv.textContent = `Запущено ${n} заказов...`;
+  startBtn.disabled = true;
+  repeatCountInput.disabled = true;
+  alphaCheckBtn.disabled = true;
+  gammaRefreshBtn.disabled = true;
+  dbStructureBtn.disabled = true;
+
+  function sleep(ms) {
+    return new Promise(res => setTimeout(res, ms));
+  }
+
+  async function sendAlphaWithRetry(retry = 0) {
+    try {
+      const resp = await fetch(`/beta.php`);
+      const data = await resp.json();
+
+      if (data.http_code === 200 && data.body.includes('Заказ успешно добавлен')) {
+        success++;
+      } else if (
+        (data.http_code === 429 || String(data.body).includes('Alpha уже выполняется')) &&
+        retry < maxRetries
+      ) {
+        await sleep(delayMs);
+        return sendAlphaWithRetry(retry + 1);
+      }
+    } catch (e) {
+      console.error('Ошибка запроса:', e);
+      // Можно добавить логирование ошибки или увеличить retry count
+    } finally {
+      completed++;
     }
   }
 
-  // Функция запуска Beta с N параллельными запросами
-  async function runBeta(n) {
-    statusDiv.textContent = 'Запускаем Beta... Пожалуйста, ждите';
-    startBtn.disabled = true;
-    repeatCountInput.disabled = true;
-    alphaCheckBtn.disabled = true;
-    gammaRefreshBtn.disabled = true;
-    dbStructureBtn.disabled = true;
-    try {
-      const response = await fetch(`/beta.php?n=${n}`);
-      if (!response.ok) throw new Error('Ошибка запроса Beta');
+  // Запускаем все запросы параллельно
+  for (let i = 0; i < n; i++) {
+    sendAlphaWithRetry();
+  }
 
-      const results = await response.json();
-
-    let successCount = results.filter(r => r.http_code === 200 && r.body.includes('Заказ успешно добавлен')).length;
-    console.log(results); // для отладки
-
-      statusDiv.textContent = `Beta завершён. Успешных заказов: ${successCount} из ${n}`;
-    } catch (err) {
-      statusDiv.textContent = `Ошибка запуска Beta: ${err.message}`;
-    } finally {
+  // Обновление статуса каждую секунду
+  const interval = setInterval(() => {
+    statusDiv.textContent = `Выполнено: ${completed} из ${n} (успешно: ${success})`;
+    if (completed >= n) {
+      clearInterval(interval);
+      statusDiv.textContent = `Готово! Успешно ${success} из ${n}`;
       startBtn.disabled = false;
       repeatCountInput.disabled = false;
       alphaCheckBtn.disabled = false;
       gammaRefreshBtn.disabled = false;
       dbStructureBtn.disabled = false;
     }
+  }, 1000);
+}
+
+// Отдельный запуск Alpha для проверки
+async function checkAlpha() {
+  statusDiv.textContent = 'Отправляем заказ (Alpha)... Пожалуйста, ждите';
+  startBtn.disabled = true;
+  repeatCountInput.disabled = true;
+  alphaCheckBtn.disabled = true;
+  gammaRefreshBtn.disabled = true;
+  dbStructureBtn.disabled = true;
+
+  try {
+    const response = await fetch('/alpha.php');
+    if (!response.ok) throw new Error('Ошибка запроса Alpha');
+    const text = await response.text();
+    statusDiv.textContent = `Ответ Alpha: ${text.trim()}`;
+  } catch (err) {
+    statusDiv.textContent = `Ошибка Alpha: ${err.message}`;
+  } finally {
+    startBtn.disabled = false;
+    repeatCountInput.disabled = false;
+    alphaCheckBtn.disabled = false;
+    gammaRefreshBtn.disabled = false;
+    dbStructureBtn.disabled = false;
   }
+}
 
-  // Один заказ через Alpha (для проверки)
-  async function checkAlpha() {
-    statusDiv.textContent = 'Отправляем заказ (Alpha)... Пожалуйста, ждите';
-    startBtn.disabled = true;
-    repeatCountInput.disabled = true;
-    alphaCheckBtn.disabled = true;
-    gammaRefreshBtn.disabled = true;
-    dbStructureBtn.disabled = true;
-
-    try {
-      const response = await fetch('/alpha.php');
-      if (!response.ok) throw new Error('Ошибка запроса Alpha');
-
-      const text = await response.text();
-
-      statusDiv.textContent = `Ответ Alpha: ${text.trim()}`;
-    } catch (err) {
-      statusDiv.textContent = `Ошибка Alpha: ${err.message}`;
-    } finally {
-      startBtn.disabled = false;
-      repeatCountInput.disabled = false;
-      alphaCheckBtn.disabled = false;
-      gammaRefreshBtn.disabled = false;
-      dbStructureBtn.disabled = false;
-    }
+// Обработчики кнопок
+startBtn.addEventListener('click', () => {
+  const n = parseInt(repeatCountInput.value, 10);
+  if (isNaN(n) || n < 1 || n > 1000) {
+    alert('Введите корректное число от 1 до 1000');
+    return;
   }
+  runBetaClientSide(n);
+});
 
-  // Обработчики кнопок
-  startBtn.addEventListener('click', () => {
-    const n = parseInt(repeatCountInput.value, 10);
-    if (isNaN(n) || n < 1 || n > 1000) {
-      alert('Введите корректное число от 1 до 1000');
-      return;
-    }
-    runBeta(n);
-  });
+alphaCheckBtn.addEventListener('click', () => {
+  checkAlpha();
+});
 
-  alphaCheckBtn.addEventListener('click', () => {
-    checkAlpha();
-  });
-
-  gammaRefreshBtn.addEventListener('click', () => {
-    fetchGamma();
-  });
-
-  dbStructureBtn.addEventListener('click', () => {
-    window.open('db_structure.html', '_blank', 'width=920,height=600,scrollbars=yes');
-  });
-  // Документация - переключатель показа/скрытия
-  docToggle.addEventListener('click', () => {
-    if (documentation.style.display === 'none' || documentation.style.display === '') {
-      documentation.style.display = 'block';
-      docToggle.textContent = '▼ Скрыть документацию проекта';
-    } else {
-      documentation.style.display = 'none';
-      docToggle.textContent = '▶ Показать / скрыть документацию проекта';
-    }
-  });
-
-  // Инициализация
+gammaRefreshBtn.addEventListener('click', () => {
   fetchGamma();
-  setInterval(fetchGamma, 1000);
+});
+
+dbStructureBtn.addEventListener('click', () => {
+  window.open('db_structure.html', '_blank', 'width=920,height=600,scrollbars=yes');
+});
+
+// Переключатель документации
+docToggle.addEventListener('click', () => {
+  if (documentation.style.display === 'none' || documentation.style.display === '') {
+    documentation.style.display = 'block';
+    docToggle.textContent = '▼ Скрыть документацию проекта';
+  } else {
+    documentation.style.display = 'none';
+    docToggle.textContent = '▶ Показать / скрыть документацию проекта';
+  }
+});
+
+// Инициализация
+fetchGamma();
+setInterval(fetchGamma, 1000);
 </script>
 
 </body>
