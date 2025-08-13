@@ -289,11 +289,12 @@ async function runBetaClientSide(n) {
   gammaRefreshBtn.disabled = true;
   dbStructureBtn.disabled = true;
 
+  // Утилита для ожидания времени
   function sleep(ms) {
     return new Promise(res => setTimeout(res, ms));
   }
 
-  // Возвращаем Promise, который резолвится когда этот запрос полностью выполнен или сброшены повторы
+  // Функция отправки запроса к beta.php с ретраями при ошибке 429 и блокировке Alpha
   function sendAlphaWithRetry(retry = 0) {
     return fetch('/beta.php')
       .then(resp => resp.json())
@@ -301,37 +302,38 @@ async function runBetaClientSide(n) {
         if (data.http_code === 200 && data.body.includes('Заказ успешно добавлен')) {
           success++;
           completed++;
-        } else if (
-          (data.http_code === 429 || String(data.body).includes('Alpha уже выполняется')) &&
-          retry < maxRetries
-        ) {
+        } else if ((data.http_code === 429 || String(data.body).includes('Alpha уже выполняется')) && retry < maxRetries) {
           return sleep(delayMs).then(() => sendAlphaWithRetry(retry + 1));
         } else {
-          // Запрос завершён ошибкой, считаем завершённым без успеха
+          // Ошибка, считаем завершённым, но не успешным
           completed++;
         }
       })
       .catch(() => {
+        // Ошибка сети или другого уровня — тоже считаем завершённым без успеха
         completed++;
       });
   }
 
-  // Запускаем все промисы и ждём, когда все завершатся
+// Запускаем все N вызовов параллельно и ждём полного завершения всех с ретраями
   const promises = [];
   for (let i = 0; i < n; i++) {
     promises.push(sendAlphaWithRetry());
   }
 
-  // Запускаем таймер промежуточного обновления статуса
-  const interval = setInterval(() => {
+  // Таймер для промежуточного показа прогресса
+  const intervalId = setInterval(() => {
     statusDiv.textContent = `Выполнено: ${completed} из ${n} (успешно: ${success})`;
   }, 1000);
 
-  await Promise.all(promises); // ждём, пока все запросы завершены
+  // Дождёмся завершения всех вызовов
+  await Promise.all(promises);
 
-  clearInterval(interval);
+  // Очищаем таймер и показываем финальный итог
+  clearInterval(intervalId);
+
   statusDiv.textContent = `Готово! Успешно ${success} из ${n}`;
-
+  // Разблокировка кнопок
   startBtn.disabled = false;
   repeatCountInput.disabled = false;
   alphaCheckBtn.disabled = false;
